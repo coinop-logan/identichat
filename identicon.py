@@ -74,13 +74,14 @@ def generateIdenticon(address, width, height):
     #---face shape ([0:3])---
     
     #Choose a point each on bottom edge, side, and top edge.
-    facePoints = [ 
-                   [dataSource.consumeWordsIntoRange(1, 0, halfWidth), height],
-                   [halfWidth,                                         dataSource.consumeWordsIntoRange(1, 0, height)],
-                   [dataSource.consumeWordsIntoRange(1, 0, halfWidth), 0]
-                 ]
+    facePoints = [None, None, None]
+    facePoints[0] = [dataSource.consumeWordsIntoRange(1, 0, halfWidth),    height]
+    facePoints[2] = [dataSource.consumeWordsIntoRange(1, 0, halfWidth),    0]
+    facePoints[1] = [halfWidth,                                            height-dataSource.consumeWordsIntoRange(1, 0, height)]
     
-    #---face color (byteVals[3:6])---
+    cheekBoneHeight = facePoints[1][1] #For use later
+    
+    #---face color ([3:6])---
     #Hmm. Should we disallow a range of colors...? We won't for now, but perhaps will later.
     #Might also need to re-balance if the colors don't "look" different very often.
     #For now, we'll just use the byteVals directly.
@@ -90,7 +91,21 @@ def generateIdenticon(address, width, height):
     #Draw a polygon with above points, plus top and bottom of centerline, using the chosen color.
     pygame.draw.polygon(halfFaceSurface, faceColor, [[0,height]] + facePoints + [[0,0]])
     
+    #---eye shape/pos ([6:12])---
+    #3 points, drawn above cheekBoneHeight, and on the inside of the line between facePoints[1] and facePoints[2]
     
+    #---eye color ([12:15])
+    
+    #---mouth shape ([15:19])---
+    #(15) length of middle, horizontal line "middle of mouth"
+    #(16,17) x and y of "outer" part of mouth
+    #(18) how "open" is the mouth?
+    
+    #---mouth color ([19:21])
+    
+    #Other ideas...
+    #ears, eyebrows, nose, top of torso, wrinkles, hair, pupil, background
+    #background color/pattern could be catchall for any unused words at the end
     
     faceSurface = pygame.Surface((width, height), pygame.SRCALPHA, 32)
     #Draw half-face and reflect to other side
