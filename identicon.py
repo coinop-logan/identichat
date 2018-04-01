@@ -1,11 +1,11 @@
 import pygame
 pygame.display.init()
 
-def byteValToRangedVal(byteVal, rangeMin, rangeMax):
-    rangeSize = rangeMax - rangeMin
-    x = byteVal / 255.0
+#def byteValToRangedVal(byteVal, rangeMin, rangeMax):
+#    rangeSize = rangeMax - rangeMin
+#    x = byteVal / 255.0
     
-    return rangeMin + (rangeSize * x)
+#    return rangeMin + (rangeSize * x)
 
 # def hexStrToByteList(hexStr):
     # assert(len(hexStr)%2 == 0)
@@ -45,9 +45,19 @@ class consumableWordList:
         
         return (min + x*rangeSize)
     
+    def consumeWordsIntoColor(self):
+        return [self.consumeWordsIntoRange(1, 0, 255), self.consumeWordsIntoRange(1, 0, 255), self.consumeWordsIntoRange(1, 0, 255)]
+    
     def wordsLeft(self):
         return len(self.hexStr)
 
+def drawHorizontalLine(surface, color, y):
+    pygame.draw.line(surface, color, [0,y], [1000,y])
+    
+def drawVerticalLine(surface, color, x):
+    pygame.draw.line(surface, color, [x,0], [x,1000])
+    
+        
 def generateIdenticon(address, width, height):
     if (width%2 != 0):
         raise ValueError("Width must be divisible by 2")
@@ -85,7 +95,7 @@ def generateIdenticon(address, width, height):
     #Hmm. Should we disallow a range of colors...? We won't for now, but perhaps will later.
     #Might also need to re-balance if the colors don't "look" different very often.
     #For now, we'll just use the byteVals directly.
-    faceColor = [dataSource.consumeWordsIntoRange(1, 0, 255), dataSource.consumeWordsIntoRange(1, 0, 255), dataSource.consumeWordsIntoRange(1, 0, 255)]
+    faceColor = dataSource.consumeWordsIntoColor()
     
     #---draw face shape---
     #Draw a polygon with above points, plus top and bottom of centerline, using the chosen color.
@@ -93,15 +103,61 @@ def generateIdenticon(address, width, height):
     
     #---eye shape/pos ([6:12])---
     #3 points, drawn above cheekBoneHeight, and on the inside of the line between facePoints[1] and facePoints[2]
+    eyePoints = [None, None, None]
+    for i in range(3):
+        xRatio = dataSource.consumeWordsIntoRange(1, 0, 1)
+        yRatio = dataSource.consumeWordsIntoRange(1, 0, 1)
+        
+        y = yRatio * facePoints[1][1]
+        
+        xLimit = facePoints[2][0] + (yRatio * (facePoints[1][0] - facePoints[2][0]))
+        
+        x = xRatio * xLimit
+        
+        eyePoints[i] = [x,y]
     
     #---eye color ([12:15])
+    eyeColor = dataSource.consumeWordsIntoColor()
     
-    #---mouth shape ([15:19])---
-    #(15) length of middle, horizontal line "middle of mouth"
-    #(16,17) x and y of "outer" part of mouth
-    #(18) how "open" is the mouth?
+    #---draw eye shape---
+    pygame.draw.polygon(halfFaceSurface, eyeColor, eyePoints)
+    
+    #---mouth shape/pos ([15:20])---
+    
+    #(15) horizontal positioning, between cheekBoneHeight and bottom
+    mouthMiddleYRatio = dataSource.consumeWordsIntoRange(1, 0, 1)
+    mouthMiddleY = cheekBoneHeight + (mouthMiddleYRatio * (height - facePoints[1][1]))
+    #drawHorizontalLine(halfFaceSurface, [255,0,0], mouthMiddleY)
+    
+    #(16) length of middle mouth line, from centerline
+    #Use mouthMiddleYRatio and facePoint[1] to determine face edge horizontally, then divide by two, to find max x of the mouthMiddle line.
+    mouthMiddleXMax = (facePoints[0][0] + ((1-mouthMiddleYRatio) * (facePoints[1][0] - facePoints[0][0]))) / 2
+    mouthMiddleX = dataSource.consumeWordsIntoRange(1, 0, mouthMiddleXMax)
+    
+    #(17,18) x and y of "outer" part of mouth
+    mouthEndXRatio = dataSource.consumeWordsIntoRange(1, 0, 1)
+    mouthEndX = mouthMiddleX + (mouthEndXRatio * (halfWidth - mouthMiddleX))
+    #drawVerticalLine(halfFaceSurface, [255,0,0], mouthMiddleXMax)
+    
+    if mouthEndX > facePoints[0][0]:
+        xRatioOnBottomFaceEdge = (mouthEndX - facePoints[0][0]) / (width - facePoints[0][0])
+        mouthEndYMaxOverall = cheekBoneHeight + ((1 - xRatioOnBottomFaceEdge) * (height - cheekBoneHeight))
+    else:
+        mouthEndYMaxOverall = height
+    
+    mouthEndYMax = cheekBoneHeight + ((1 - mouthEndXRatio) * (mouthEndYMaxOverall - cheekBoneHeight))
+    mouthEndY = dataSource.consumeWordsIntoRange(1, cheekBoneHeight, mouthEndYMax)
+    
+    #assemble mouth points into list
+    mouthPoints = [[0,            mouthMiddleY],
+                   [mouthMiddleX, mouthMiddleY],
+                   [mouthEndX,    mouthEndY]]
     
     #---mouth color ([19:21])
+    mouthColor = dataSource.consumeWordsIntoColor()
+    
+    #---draw mouth---
+    pygame.draw.lines(halfFaceSurface, mouthColor, False, mouthPoints, 3)
     
     #Other ideas...
     #ears, eyebrows, nose, top of torso, wrinkles, hair, pupil, background

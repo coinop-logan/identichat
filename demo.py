@@ -2,7 +2,7 @@ import identicon, sys, pygame, random
 pygame.display.init()
 pygame.font.init()
 
-screen = pygame.display.set_mode([500,500])
+screen = pygame.display.set_mode([1000,1000])
 font = pygame.font.SysFont('Arial', 16)
 
 def makeRandomEthAddress():
@@ -13,13 +13,15 @@ def makeRandomEthAddress():
     return address
 
 def main():
-    try:
-        address = sys.argv[1]
-    except IndexError:
-        address = makeRandomEthAddress()
-    icon = identicon.generateIdenticon(address, 300, 300)
-    addrTextImage = font.render(address, False, (255,255,255))
+    makeNewAddresses = True
     while True:
+        if makeNewAddresses:
+            makeNewAddresses = False
+            addresses = []
+            icons = []
+            for i in range(100):
+                addresses.append(makeRandomEthAddress())
+                icons.append(identicon.generateIdenticon(addresses[-1], 50, 50))
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return
@@ -29,13 +31,14 @@ def main():
                     return
                 if event.key == pygame.K_SPACE:
                     #generate a dummy address
-                    address = makeRandomEthAddress()
-                    icon = identicon.generateIdenticon(address, 300, 300)
-                    addrTextImage = font.render(address, False, (255,255,255))
+                    makeNewAddresses = True
     
         screen.fill([0,0,0])
-        screen.blit(icon, [100,100])
-        screen.blit(addrTextImage, [100, 80])
+        for i in range(100):
+            x = i%10
+            y = (i-x)/10
+            pos = [x*75 + 25, y*75 + 25]
+            screen.blit(icons[i], pos)
         pygame.display.flip()
 
 main()
